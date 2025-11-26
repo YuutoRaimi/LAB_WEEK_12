@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel() {
     private val _popularMovies = MutableStateFlow<List<Movie>>(emptyList())
@@ -22,11 +23,18 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
     private fun fetchPopularMovies() {
         viewModelScope.launch(Dispatchers.IO) {
             movieRepository.fetchMovies()
-                .catch { e ->
-                    _error.value = "An exception occurred: ${e.message}"
+                .catch { exception ->
+                    _error.value = "An exception occurred: ${exception.message}"
                 }
                 .collect { movies ->
-                    _popularMovies.value = movies
+
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
+
+                    val filteredAndSortedMovies = movies
+                        .filter { it.releaseDate?.startsWith(currentYear) == true }
+                        .sortedByDescending { it.popularity }
+
+                    _popularMovies.value = filteredAndSortedMovies
                 }
         }
     }
